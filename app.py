@@ -1429,7 +1429,17 @@ def load_models(folder):
                     models[model_name] = joblib.load(model_path)
                     st.success(f"✅ Modèle {model_name} chargé avec succès")
                 except Exception as e:
-                    st.warning(f"⚠️ Erreur lors du chargement de {model_name}: {e}")
+                    error_msg = str(e)
+                    if "No module named 'lightgbm'" in error_msg:
+                        st.warning(f"⚠️ Modèle {model_name} ignoré: lightgbm non installé")
+                    elif "No module named 'xgboost'" in error_msg:
+                        st.warning(f"⚠️ Modèle {model_name} ignoré: xgboost non installé")
+                    elif "No module named '_loss'" in error_msg:
+                        st.warning(f"⚠️ Modèle {model_name} ignoré: scikit-learn version incompatible")
+                    elif "incompatible dtype" in error_msg:
+                        st.warning(f"⚠️ Modèle {model_name} ignoré: format pickle incompatible")
+                    else:
+                        st.warning(f"⚠️ Erreur lors du chargement de {model_name}: {e}")
         
         if not models:
             st.warning("⚠️ Aucun modèle chargé")
@@ -1515,18 +1525,27 @@ def load_historical_data(dataset_key):
         
         if date_cols:
             date_col = date_cols[0]
-            # st.info(f"📅 Colonne de date trouvée: {date_col}")
+            st.info(f"📅 Colonne de date trouvée: {date_col}")
+            
+            # Afficher quelques exemples de dates
+            sample_dates = df[date_col].head(5).tolist()
+            st.info(f"📊 Exemples de dates: {sample_dates}")
             
             # Essayer différents formats de date
             df[date_col] = pd.to_datetime(df[date_col], errors='coerce', format='%d/%m/%Y %H:%M:%S')
             
             # Si ça ne marche pas, essayer sans format
             if df[date_col].isna().all():
+                st.info("🔄 Tentative avec format automatique...")
                 df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+            
+            # Vérifier combien de dates ont été parsées
+            valid_dates = df[date_col].notna().sum()
+            st.info(f"📊 Dates parsées: {valid_dates} sur {len(df)}")
             
             last_date = df[date_col].max()
             if pd.notna(last_date):
-                # st.success(f"📅 Dernière date trouvée: {last_date.strftime('%d/%m/%Y')}")
+                st.success(f"📅 Dernière date trouvée: {last_date.strftime('%d/%m/%Y')}")
                 return df, last_date, date_col
             else:
                 st.warning("⚠️ Aucune date valide trouvée après parsing")
