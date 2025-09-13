@@ -1409,16 +1409,36 @@ def get_datasets():
 # =============================================================================
 
 def load_models(folder):
-    """Charge les modèles - EXACTEMENT COMME APP_SIMPLE"""
+    """Charge les modèles - ADAPTÉ POUR DÉPLOIEMENT"""
     models = {}
     try:
-        for file in os.listdir(folder):
+        # Vérifier si le dossier existe
+        if not os.path.exists(folder):
+            st.warning(f"⚠️ Dossier {folder} non trouvé")
+            return {}
+        
+        # Lister les fichiers dans le dossier
+        files = os.listdir(folder)
+        st.info(f"🔍 Fichiers trouvés dans {folder}: {files}")
+        
+        for file in files:
             if file.endswith('_model.joblib'):
                 model_name = file.replace('_model.joblib', '')
                 model_path = os.path.join(folder, file)
-                models[model_name] = joblib.load(model_path)
+                try:
+                    models[model_name] = joblib.load(model_path)
+                    st.success(f"✅ Modèle {model_name} chargé avec succès")
+                except Exception as e:
+                    st.warning(f"⚠️ Erreur lors du chargement de {model_name}: {e}")
+        
+        if not models:
+            st.warning("⚠️ Aucun modèle chargé")
+        else:
+            st.success(f"🎉 {len(models)} modèles chargés avec succès!")
+        
         return models
-    except:
+    except Exception as e:
+        st.error(f"❌ Erreur lors du chargement des modèles: {e}")
         return {}
 
 def load_historical_data(dataset_key):
@@ -1455,15 +1475,20 @@ def load_historical_data(dataset_key):
                 st.warning("⚠️ Aucun fichier de données trouvé")
                 return None, pd.Timestamp('2024-01-01'), "Date par défaut"
         
-        # st.info(f"📁 Utilisation du fichier original: {original_filename}")
+        st.info(f"📁 Utilisation du fichier: {original_filename}")
         
         # Charger selon le type de fichier
         if original_filename.endswith('.xlsx'):
             df = pd.read_excel(original_filename)
+            st.info(f"📊 Fichier Excel chargé: {df.shape[0]} lignes, {df.shape[1]} colonnes")
         elif original_filename.endswith('.csv'):
             df = pd.read_csv(original_filename, encoding='latin-1', sep=';', on_bad_lines='skip')
+            st.info(f"📊 Fichier CSV chargé: {df.shape[0]} lignes, {df.shape[1]} colonnes")
         else:
             df = pd.read_csv(original_filename, sep='\t', encoding='latin-1', on_bad_lines='skip')
+            st.info(f"📊 Fichier TSV chargé: {df.shape[0]} lignes, {df.shape[1]} colonnes")
+        
+        st.info(f"📋 Colonnes disponibles: {list(df.columns)}")
         
         # CORRECTION: Nettoyage des colonnes pour éviter les erreurs de sérialisation
         for col in df.columns:
@@ -5521,4 +5546,7 @@ Bonjour ! Je suis votre assistant IA spécialisé dans la gestion de stock et d'
 **🔍 Suggestion :** Essayez de me poser une question plus spécifique à la gestion de stock, ou utilisez les boutons de questions suggérées ci-dessus !"""
 
 if __name__ == "__main__":
+    # Désactiver le file watching pour éviter l'erreur inotify sur Streamlit Cloud
+    import os
+    os.environ['STREAMLIT_SERVER_FILE_WATCHER_TYPE'] = 'none'
     main()
