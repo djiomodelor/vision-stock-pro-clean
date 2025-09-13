@@ -1327,28 +1327,80 @@ st.markdown("""
 # =============================================================================
 
 def get_datasets():
-    """Récupère les datasets disponibles - EXACTEMENT COMME APP_SIMPLE"""
+    """Récupère les datasets disponibles - ADAPTÉ POUR DÉPLOIEMENT"""
     datasets = []
     
-    # Chercher les dossiers de modèles
-    for folder in os.listdir('.'):
-        if folder.startswith('modeles_final_optimise_') and os.path.isdir(folder):
-            name = folder.replace('modeles_final_optimise_', '')
-            display_name = {
-                'mayor1_csv': 'Mayor 1 (CSV)',
-                'laitbroli_1kg_xls': 'Lait Broli 1kg',
-                'may_arm_1kg_xls': 'May Arm 1kg',
-                'may_arm_5kg_xls': 'May Arm 5kg',
-                'couche_softcqre_T4_xls': 'Couche Softcare T4',
-                'papierhygsita_xls': 'Papier Hygisita',
-                'parleG_xls': 'ParleG'
-            }.get(name, name)
-            
-            datasets.append({
-                'name': display_name,
-                'folder': folder,
-                'key': name
-            })
+    # Structure pour le déploiement - utiliser le dossier models/ et data/
+    deployment_datasets = [
+        {
+            'name': 'Mayor 1 (CSV)',
+            'folder': 'models',
+            'key': 'mayor1_csv',
+            'data_file': 'data/mayor1.xlsx'
+        },
+        {
+            'name': 'Lait Broli 1kg',
+            'folder': 'models', 
+            'key': 'laitbroli_1kg',
+            'data_file': 'data/laitbroli_1kg_clean.csv'
+        },
+        {
+            'name': 'May Arm 1kg',
+            'folder': 'models',
+            'key': 'may_arm_1kg', 
+            'data_file': 'data/may_arm_1kg_clean.csv'
+        },
+        {
+            'name': 'May Arm 5kg',
+            'folder': 'models',
+            'key': 'may_arm_5kg',
+            'data_file': 'data/may_arm_5kg_clean.csv'
+        },
+        {
+            'name': 'Couche Softcare T4',
+            'folder': 'models',
+            'key': 'couche_softcqre_T4',
+            'data_file': 'data/couche_softcqre_T4_clean.csv'
+        },
+        {
+            'name': 'Papier Hygisita',
+            'folder': 'models',
+            'key': 'papierhygsita',
+            'data_file': 'data/papierhygsita_clean.csv'
+        },
+        {
+            'name': 'ParleG',
+            'folder': 'models',
+            'key': 'parleG',
+            'data_file': 'data/parleG_clean.csv'
+        }
+    ]
+    
+    # Vérifier que les dossiers et fichiers existent
+    for dataset in deployment_datasets:
+        if os.path.exists(dataset['folder']) and os.path.exists(dataset['data_file']):
+            datasets.append(dataset)
+    
+    # Fallback : chercher les anciens dossiers modeles_final_optimise_ (pour compatibilité locale)
+    if not datasets:
+        for folder in os.listdir('.'):
+            if folder.startswith('modeles_final_optimise_') and os.path.isdir(folder):
+                name = folder.replace('modeles_final_optimise_', '')
+                display_name = {
+                    'mayor1_csv': 'Mayor 1 (CSV)',
+                    'laitbroli_1kg_xls': 'Lait Broli 1kg',
+                    'may_arm_1kg_xls': 'May Arm 1kg',
+                    'may_arm_5kg_xls': 'May Arm 5kg',
+                    'couche_softcqre_T4_xls': 'Couche Softcare T4',
+                    'papierhygsita_xls': 'Papier Hygisita',
+                    'parleG_xls': 'ParleG'
+                }.get(name, name)
+                
+                datasets.append({
+                    'name': display_name,
+                    'folder': folder,
+                    'key': name
+                })
     
     return datasets
 
@@ -1370,10 +1422,21 @@ def load_models(folder):
         return {}
 
 def load_historical_data(dataset_key):
-    """Charge les données historiques - EXACTEMENT COMME APP_SIMPLE"""
+    """Charge les données historiques - ADAPTÉ POUR DÉPLOIEMENT"""
     try:
-        # Fichiers originaux
-        original_files = {
+        # Mapping des fichiers pour le déploiement
+        deployment_files = {
+            'mayor1_csv': 'data/mayor1.xlsx',
+            'laitbroli_1kg': 'data/laitbroli_1kg_clean.csv',
+            'may_arm_1kg': 'data/may_arm_1kg_clean.csv',
+            'may_arm_5kg': 'data/may_arm_5kg_clean.csv',
+            'couche_softcqre_T4': 'data/couche_softcqre_T4_clean.csv',
+            'papierhygsita': 'data/papierhygsita_clean.csv',
+            'parleG': 'data/parleG_clean.csv'
+        }
+        
+        # Fallback pour les anciens noms de clés
+        fallback_files = {
             'mayor1_csv': 'mayor1.xlsx',
             'laitbroli_1kg_xls': 'laitbroli_1kg.xls',
             'may_arm_1kg_xls': 'may_arm_1kg.xls',
@@ -1383,11 +1446,14 @@ def load_historical_data(dataset_key):
             'parleG_xls': 'parleG.xls'
         }
         
-        # Utiliser directement le fichier original
-        original_filename = original_files.get(dataset_key)
+        # Essayer d'abord les fichiers de déploiement
+        original_filename = deployment_files.get(dataset_key)
         if not original_filename or not os.path.exists(original_filename):
-            st.warning("⚠️ Aucun fichier de données trouvé")
-            return None, pd.Timestamp('2024-01-01'), "Date par défaut"
+            # Fallback vers les anciens fichiers
+            original_filename = fallback_files.get(dataset_key)
+            if not original_filename or not os.path.exists(original_filename):
+                st.warning("⚠️ Aucun fichier de données trouvé")
+                return None, pd.Timestamp('2024-01-01'), "Date par défaut"
         
         # st.info(f"📁 Utilisation du fichier original: {original_filename}")
         
